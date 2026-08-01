@@ -36,8 +36,8 @@ stbsr_code/
 ## Installation
 
 ```bash
-git clone <repository-url>
-cd stbsr_code
+git clone https://github.com/wzhangwhu/STBSR.git
+cd STBSR
 
 conda create -n stbsr python=3.10 -y
 conda activate stbsr
