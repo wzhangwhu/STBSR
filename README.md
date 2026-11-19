@@ -48,26 +48,17 @@ jupyter lab
 
 ## Reproduce the paper results
 
-| Notebook | Default paper replay | Optional training |
-|---|---|---|
-| [DLPFC 151672](notebooks/run_stbsr_151672.ipynb) | Fig. 2a and 2c, 151672 ten-run results, markers and reconstructed representation | Joint-model run 5, recorded seed 11059586 |
-| [ARTISTA Stage 57](notebooks/run_stbsr_ARTISTA_Stage57_telencephalon.ipynb) | Fig. 4a ARIs, recomputed Fig. 4c edge recovery, markers and ten-run reconstruction benchmark | Joint-model seed 46 with both readouts |
+Open the training notebook for [DLPFC section 151672](notebooks/run_stbsr_151672.ipynb)
+or [ARTISTA Stage 57](notebooks/run_stbsr_ARTISTA_Stage57_telencephalon.ipynb).
+Set `data_root` in the first code cell, or set the environment variable
+`STBSR_DATA_ROOT`. Each notebook trains one recorded seed, reports both
+clustering readouts and displays the reference and model partitions.
 
-Both notebooks open in paper-replay mode. This mode recomputes ARIs from the
-stored assignments and recreates the indicated panels and summaries. It does
-not need a GPU or the raw training inputs. The Stage 57 map with ARI 0.6371 is
-the historical encoder partition used in Fig. 4a. Current-model retraining
-uses the fixed joint objective and produces a separate partition.
-
-Set `STBSR_RUN_MODE=train` and `STBSR_DATA_ROOT` in the environment or the
-notebook configuration cell to train a representative run. Set
-`STBSR_DEVICE=cpu` for a CPU run. The saved assignments give exact display
-replay across machines. Fresh training scores may vary across environments.
-
-The [benchmark tables](benchmark/) include the ten final STBSR ARIs and
-associated metrics for each of the 20 datasets, and the dataset-level mean
-ARIs for all compared methods from Supplementary Data 1. Each dataset is given
-equal weight in the overall mean. External-method training is outside this repository.
+The [benchmark directory](benchmark/) provides the 200 runs reported in
+Supplementary Data 1, the displayed case-study partitions and their
+downstream values. Each dataset has equal weight in the overall ARI mean.
+The Stage 57 encoder partition in Fig. 4a is documented alongside the
+normalized-reconstruction benchmark results.
 
 ## Run the benchmark
 
@@ -112,3 +103,5 @@ A normal run saves the endpoint model, loss history, run metadata and both
 KMeans assignments. `--save-reconstruction` also saves the decoded matrix.
 `--compact` retains the two label arrays and omits the checkpoint and latent
 matrix. Loss-stop status and the number of updates are recorded in `run.json`.
+
+Use the release that wrote a checkpoint to replay that checkpoint.

@@ -188,24 +188,24 @@
   ],
   "family_weights": {
     "HBC": {
-      "zinb": 0.85,
-      "breg": 0.025,
-      "bdccr": 0.05
+      "sce": 0.85,
+      "bce": 0.025,
+      "ccr": 0.05
     },
     "ChickenHeart": {
-      "zinb": 0.85,
-      "breg": 0.05,
-      "bdccr": 0.1
+      "sce": 0.85,
+      "bce": 0.05,
+      "ccr": 0.1
     },
     "Axolotl": {
-      "zinb": 0.85,
-      "breg": 0.025,
-      "bdccr": 0.05
+      "sce": 0.85,
+      "bce": 0.025,
+      "ccr": 0.05
     },
     "DLPFC": {
-      "zinb": 0.85,
-      "breg": 0.05,
-      "bdccr": 0.1
+      "sce": 0.85,
+      "bce": 0.05,
+      "ccr": 0.1
     }
   },
   "stop": {

@@ -66,6 +66,8 @@ def trusted_pairs(views,neighbors):
     weights = np.clip((1+np.minimum(a[r,c],b[r,c]))*.5,.05,1).astype(np.float32)
     assert len(positives)>n and len(negatives)>n and not np.intersect1d(positives,negatives).size
     assert np.all(r<c) and np.isfinite(weights).all()
-    return {'pos':np.stack((r,c)),'pos_w':weights,'neg':np.stack(np.divmod(negatives,n)),
-            'local_pos':np.stack(np.divmod(local,n)),
-            'other_pos':np.stack(np.divmod(np.setdiff1d(positives,local,assume_unique=True),n))}
+    return {
+        "pos": np.stack((r, c)),
+        "pos_w": weights,
+        "neg": np.stack(np.divmod(negatives, n)),
+    }

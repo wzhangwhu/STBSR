@@ -5,7 +5,6 @@ for variable in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS"):
     os.environ[variable] = "1"
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
-import copy
 import random
 import time
 from types import SimpleNamespace
@@ -19,27 +18,8 @@ from torch.nn import functional as F
 from . import utils
 from .models import STBSR
 from .expression_pairs import expression_views, trusted_pairs
-from .spatial_state import SpatialGraphState
+from .spatial_state import fixed_spatial_operator
 from .stopping import Plateau
-
-
-class JointSTBSR(STBSR):
-    def __init__(self, genes, spatial_attention_gain):
-        super().__init__(genes, 128, 64, 0.0)
-        self.spatial_attention_gain = spatial_attention_gain
-
-    def forward(self, expression, spatial_graph, expression_graph):
-        spatial = self.SGCN(expression, spatial_graph)
-        feature = self.FGCN(expression, expression_graph)
-        meta = self._get_meta(expression.device)
-        mixed = self.CGCN(expression, meta * expression_graph + (1 - meta) * spatial_graph)
-        branches = torch.stack([spatial, mixed, feature], dim=1)
-        gains = branches.new_tensor([self.spatial_attention_gain, 1., 1.]).reshape(1, 3, 1)
-        attention = F.normalize(self.MLP_L(branches) * gains, p=2, dim=1)
-        fused = torch.cat([attention[:, index] * branch for index, branch in enumerate((spatial, mixed, feature))], dim=1)
-        embedding = self.proj3(fused)
-        pi, dispersion, mean = self.ZINB(embedding)
-        return embedding, pi, dispersion, mean, spatial, feature, mixed
 
 
 def relation_arrays(data, coordinates):
@@ -106,35 +86,33 @@ def set_seed(seed):
 
 def make_system(data, family, cfg, seed, device):
     set_seed(seed)
-    network = JointSTBSR(data.x.shape[1], cfg["spatial_attention_gain"][family]).to(device)
-    graph = SpatialGraphState(data.spatial_adjacency).to(device)
+    network = STBSR(data.x.shape[1], cfg["spatial_attention_gain"][family]).to(device)
+    spatial_graph = fixed_spatial_operator(data.spatial_adjacency).to(device)
     features = utils.sparse_mx_to_torch_sparse_tensor(
         utils.normalize_sparse_matrix(data.feature_adjacency + sp.eye(len(data.x)))
     ).coalesce().to(device).to_dense()
     expression = torch.as_tensor(data.x, device=device)
-    return network, graph, expression, features
+    return network, spatial_graph, expression, features
 
 
 def make_optimizer(network, cfg):
     lr = cfg["learning_rate"]
-    optimizer = torch.optim.Adam(network.parameters(), lr=lr, weight_decay=cfg["weight_decay"])
-    template = dict(optimizer.param_groups[0])
-    groups = {"base": [], "attention": [], "projection": []}
-    for name, parameter in network.named_parameters():
-        group = "attention" if name.startswith("MLP_L.") else "projection" if name.startswith("proj3.") else "base"
-        groups[group].append((name, parameter))
-    optimizer.param_groups = []
-    for group, members in groups.items():
-        factor = cfg["attention_rate_ratio"] if group == "attention" else 1.
-        optimizer.param_groups.append(dict(template, params=[p for _, p in members], param_names=[n for n, _ in members],
-                                     group_name=group, lr=lr * factor, update_scale=factor))
-    return optimizer
+    return torch.optim.Adam(
+        [
+            {"params": [p for name, p in network.named_parameters()
+                        if not name.startswith(("attention.", "fusion."))]},
+            {"params": network.attention.parameters(), "lr": lr * cfg["attention_rate_ratio"]},
+            {"params": network.fusion.parameters()},
+        ],
+        lr=lr,
+        weight_decay=cfg["weight_decay"],
+    )
 
 
 def component_losses(outputs, x, data, relations, saturate):
-    z, _, _, mean, spatial, feature, _ = outputs
+    z, mean, spatial, feature = outputs
     return (scaled_cosine_error(x, mean), pair_loss(z, relations, saturate),
-            utils.dicr_loss_little_block_diagonal_precluster(spatial, feature, data.preclusters))
+            utils.cross_view_consistency(spatial, feature, data.preclusters))
 
 
 def classify(values, k):
@@ -150,18 +128,17 @@ def readout(embedding, mean, k):
 
 def fitted_arrays(outputs):
     return dict(embedding=outputs[0].detach().cpu().numpy().copy(),
-                reconstruction=outputs[3].detach().cpu().numpy().copy())
+                reconstruction=outputs[1].detach().cpu().numpy().copy())
 
 
 def train(data, coordinates, spec, cfg, seed, device, steps=None):
     family = spec["family"]
-    w = cfg["family_weights"][family]
-    weights = dict(rec=w["zinb"], pair=w["breg"], ccr=w["bdccr"])
+    weights = cfg["family_weights"][family]
     rules = dict(cfg["stop"], **cfg["type_stop_overrides"].get(family, {}))
     stopper = Plateau(rules, weights)
     rel = tuple(torch.as_tensor(a, device=device) for a in relation_arrays(data, coordinates))
-    network, graph, x, features = make_system(data, family, cfg, seed, device)
-    spatial_graph = graph.normalized().to_dense()
+    network, spatial_operator, x, features = make_system(data, family, cfg, seed, device)
+    spatial_graph = spatial_operator.to_dense()
     optimizer = make_optimizer(network, cfg)
     saturate = family in cfg["saturate_trusted_negatives"]
     history = []
@@ -171,35 +148,40 @@ def train(data, coordinates, spec, cfg, seed, device, steps=None):
             raise TimeoutError(f"Training exceeded the case time limit at update {epoch}")
         network.train()
         optimizer.zero_grad(set_to_none=True)
-        rec, pair, ccr = component_losses(network(x, spatial_graph, features), x, data, rel, saturate)
-        loss = sum([weights["rec"] * rec, weights["pair"] * pair, weights["ccr"] * ccr])
+        sce, bce, ccr = component_losses(network(x, spatial_graph, features), x, data, rel, saturate)
+        loss = sum([weights["sce"] * sce, weights["bce"] * bce, weights["ccr"] * ccr])
         if not torch.isfinite(loss):
             raise FloatingPointError(f"Nonfinite loss at update {epoch}")
         loss.backward()
         if any(p.grad is not None and not torch.isfinite(p.grad).all() for p in network.parameters()):
             raise FloatingPointError(f"Nonfinite gradient at update {epoch}")
         optimizer.step()
-        history.append(dict(CompletedSteps=epoch, Loss=float(loss.detach()), Reconstruction=float(rec.detach()),
-                            Pair=float(pair.detach()), CCR=float(ccr.detach()), lambda_rec=weights["rec"],
-                            lambda_pair=weights["pair"], lambda_ccr=weights["ccr"],
+        history.append(dict(CompletedSteps=epoch, Loss=float(loss.detach()), SCE=float(sce.detach()),
+                            BCE=float(bce.detach()), CCR=float(ccr.detach()), lambda_sce=weights["sce"],
+                            lambda_bce=weights["bce"], lambda_ccr=weights["ccr"],
                             lr_base=optimizer.param_groups[0]["lr"], lr_attention=optimizer.param_groups[1]["lr"],
                             MetaRaw=float(network.meta.detach()), MetaEffective=float(network.meta.detach().clamp(0, 1))))
         if steps is None and stopper(history):
             break
     network.eval()
-    state = dict(model={k: v.detach().cpu().clone() for k, v in network.state_dict().items()},
-                 graph={k: v.detach().cpu().clone() for k, v in graph.state_dict().items()}, attention_history=None,
-                 optimization_epoch=len(history), completed_updates=len(history), mode="eval",
-                 optimizer=copy.deepcopy(optimizer.state_dict()), seed=seed, arm="fixed_reference")
+    state = dict(
+        schema_version=2,
+        model={k: v.detach().cpu().clone() for k, v in network.state_dict().items()},
+        spatial_operator=spatial_operator.detach().cpu(),
+        completed_updates=len(history),
+        seed=seed,
+    )
     with torch.no_grad():
         arrays = fitted_arrays(network(x, spatial_graph, features))
     return state, arrays, history, stopper
 
 
 def replay(data, spec, cfg, state, device):
-    network, graph, x, features = make_system(data, spec["family"], cfg, state["seed"], device)
+    if state.get("schema_version") != 2:
+        raise ValueError("Use the release that saved this checkpoint to replay it.")
+    network, _, x, features = make_system(data, spec["family"], cfg, state["seed"], device)
     network.load_state_dict(state["model"], strict=True)
-    graph.load_state_dict(state["graph"], strict=True)
     network.eval()
+    spatial_graph = state["spatial_operator"].to(device).to_dense()
     with torch.no_grad():
-        return fitted_arrays(network(x, graph.normalized().to_dense(), features))
+        return fitted_arrays(network(x, spatial_graph, features))

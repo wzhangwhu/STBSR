@@ -14,8 +14,7 @@ The Stage 57 domain table records the displayed Fig. 4a partitions (4,410
 cells), their coordinates and the measured marker values used in Fig. 4b.
 The STBSR assignment is the archived encoder partition with ARI 0.6371.
 The reconstruction benchmark used by Supplementary Data 1 has a mean ARI of
-0.5970. The notebook recomputes the Fig. 4c edge-recovery counts and displays
-the reported Fig. 4d GO terms.
+0.5970. The boundary and GO tables provide the values displayed in Fig. 4c and d.
 
 Measured expression values here are log1p counts per 10,000. Full training
 inputs come from the originating datasets described in the manuscript.
