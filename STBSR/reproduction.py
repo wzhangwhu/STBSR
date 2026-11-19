@@ -67,7 +67,15 @@ def plot_domains(frame, methods, size=4, max_columns=4):
     for ax in axes.flat:
         ax.set_axis_off()
     for ax, (name, assignment) in zip(axes.flat, pairs):
-        ax.scatter(frame["x"], frame["y"], c=[palette.get(x, "#d7d9dc") for x in assignment],
+        plot_palette = palette.copy()
+        neutral = ("#595b60", "#777980", "#96999e", "#bcbfc4")
+        unmatched = sorted(
+            label for label in pd.unique(assignment)
+            if isinstance(label, str) and label.startswith("Unmatched ") and label not in palette
+        )
+        for index, label in enumerate(unmatched):
+            plot_palette[label] = neutral[index % len(neutral)]
+        ax.scatter(frame["x"], frame["y"], c=[plot_palette.get(label, "#d7d9dc") for label in assignment],
                    s=size, linewidths=0, rasterized=True)
         ax.set_title(name)
         ax.set_aspect("equal")
@@ -79,5 +87,11 @@ def plot_domains(frame, methods, size=4, max_columns=4):
 def display_labels(reference, clusters):
     overlap = pd.crosstab(clusters, reference)
     rows, columns = linear_sum_assignment(-overlap.to_numpy())
-    mapping = dict(zip(overlap.index[rows], overlap.columns[columns]))
+    mapping = {
+        overlap.index[row]: overlap.columns[column]
+        for row, column in zip(rows, columns, strict=True)
+        if overlap.iat[row, column] > 0
+    }
+    unmapped = sorted(set(clusters.dropna()) - mapping.keys())
+    mapping.update({cluster: f"Unmatched {index}" for index, cluster in enumerate(unmapped, 1)})
     return clusters.map(mapping).fillna("Unlabelled")

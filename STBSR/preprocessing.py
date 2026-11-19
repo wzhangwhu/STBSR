@@ -26,7 +26,7 @@ def prepare_training_data(adata,n_clusters,spatial_radius):
     adata=normalize_adata(adata,highly_genes=3000)
     adata=precluster(adata,n_clusters)
     preprocessing_seconds=time.perf_counter()-start
-    labels=adata.obs['precluster'].astype('category').cat.codes.to_numpy()
+    labels=adata.obs['precluster'].astype('category').cat.codes.to_numpy(copy=True)
     start=time.perf_counter()
     spatial_base,neighbors,non_neighbors=utils.spatial_construct_graph(adata,radius=spatial_radius)
     feature_base=utils.features_construct_graph(adata.X,k=15)

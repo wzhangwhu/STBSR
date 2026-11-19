@@ -18,12 +18,10 @@ STBSR/                          Model, input preparation, training and reproduct
 metric_utils/                   Clustering and spatial-boundary metrics
 notebooks/
   run_stbsr_151672.ipynb
-  run_stbsr_ARTISTA_Stage57_telencephalon.ipynb
-benchmark/                      Archived paper scores and representative partitions
-example_data/                   Example inputs already distributed with this repository
+  run_stbsr_ARTISTA_Stage54_telencephalon.ipynb
+data/                           Original inputs for DLPFC 151672 and ARTISTA Stage 54
 config.json                     The 20 paper datasets, model settings and recorded seeds
 run_stbsr_20datasets.py          Benchmark runner
-smoke_test.py                    Small end-to-end model check
 requirements.txt
 ```
 
@@ -35,7 +33,6 @@ The reference environment used Python 3.10 and PyTorch 2.7.0 with CUDA 12.8.
 git clone https://github.com/wzhangwhu/STBSR.git
 cd STBSR
 python -m pip install -r requirements.txt
-python smoke_test.py --device cpu
 ```
 
 Install a PyTorch build compatible with the available CUDA driver for GPU runs.
@@ -49,16 +46,12 @@ jupyter lab
 ## Reproduce the paper results
 
 Open the training notebook for [DLPFC section 151672](notebooks/run_stbsr_151672.ipynb)
-or [ARTISTA Stage 57](notebooks/run_stbsr_ARTISTA_Stage57_telencephalon.ipynb).
-Set `data_root` in the first code cell, or set the environment variable
-`STBSR_DATA_ROOT`. Each notebook trains one recorded seed, reports both
-clustering readouts and displays the reference and model partitions.
-
-The [benchmark directory](benchmark/) provides the 200 runs reported in
-Supplementary Data 1, the displayed case-study partitions and their
-downstream values. Each dataset has equal weight in the overall ARI mean.
-The Stage 57 encoder partition in Fig. 4a is documented alongside the
-normalized-reconstruction benchmark results.
+or [ARTISTA Stage 54](notebooks/run_stbsr_ARTISTA_Stage54_telencephalon.ipynb).
+Both notebooks read their bundled inputs from `data/` by default. The Stage 54
+HDF5 file uses lossless compression. Each
+notebook trains one recorded seed, reports both clustering readouts and
+displays the reference and model partitions. To use a different data directory,
+set `data_root` in the first code cell or set `STBSR_DATA_ROOT`.
 
 ## Run the benchmark
 
@@ -71,9 +64,7 @@ section and place them under the relative paths in `config.json`.
   the `ground_truth` column of `metadata.tsv` for HBC.
 - Chicken heart and ARTISTA use raw-count h5ad files with `obsm["spatial"]`.
   The evaluation keys are `region` and `Annotation`, respectively. ARTISTA
-  training reads the original `layers['counts']` matrices. The older bundled
-  Stage 57 example contains transformed expression. Use the original
-  ARTISTA h5ad for fresh training.
+  training reads the original `layers['counts']` matrices.
 
 ```bash
 python run_stbsr_20datasets.py --data-root /path/to/data --dry-run
