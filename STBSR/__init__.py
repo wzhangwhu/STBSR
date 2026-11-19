@@ -1,3 +1,1 @@
-from .models import STBSR
-
-__all__ = ["STBSR"]
+"""STBSR joint-objective spatial domain identification."""

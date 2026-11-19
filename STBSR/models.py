@@ -3,10 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import Linear
 
-try:
-    from .layers import GraphConvolution
-except ImportError:
-    from layers import GraphConvolution
+from .layers import GraphConvolution
 
 
 class GCN(nn.Module):
@@ -55,63 +52,87 @@ class MLP_L(nn.Module):
 
 
 class STBSR(nn.Module):
-    """Three-branch STBSR encoder with adaptive representation fusion."""
-
+    """
+    Unified STBSR for ablation experiments.
+    Supports:
+      - branch removal (S/F/C)
+      - fixed or learnable meta
+      - CAM-like adaptive fusion or direct average
+    """
     def __init__(
         self,
         nfeat,
         nhid1,
         nhid2,
         dropout,
+        *,
+        use_s_branch=True,
+        use_f_branch=True,
+        use_c_branch=True,
+        use_amf=True,
+        fixed_meta=None,
     ):
         super().__init__()
+        self.use_s_branch = use_s_branch
+        self.use_f_branch = use_f_branch
+        self.use_c_branch = use_c_branch
+        self.use_amf = use_amf
+        self.fixed_meta = fixed_meta
         self.dropout = dropout
 
-        self.SGCN = GCN(nfeat, nhid1, nhid2, dropout)
-        self.FGCN = GCN(nfeat, nhid1, nhid2, dropout)
-        self.CGCN = GCN(nfeat, nhid1, nhid2, dropout)
+        self.SGCN = GCN(nfeat, nhid1, nhid2, dropout) if use_s_branch else None
+        self.FGCN = GCN(nfeat, nhid1, nhid2, dropout) if use_f_branch else None
+        self.CGCN = GCN(nfeat, nhid1, nhid2, dropout) if use_c_branch else None
         self.ZINB = Decoder(nfeat, nhid1, nhid2)
 
-        self.meta = nn.Parameter(torch.tensor([0.1], dtype=torch.float32))
+        if fixed_meta is None:
+            self.meta = nn.Parameter(torch.tensor([0.1], dtype=torch.float32))
+        else:
+            self.register_buffer("meta_const", torch.tensor([float(fixed_meta)], dtype=torch.float32))
+            self.meta = None
 
         self.MLP_L = MLP_L(64)
-        # Preserve the published seeded initialization sequence.
         self.proj1 = nn.Linear(64, 64)
         self.proj2 = nn.Linear(128, 64)
         self.proj3 = nn.Linear(192, 64)
 
-    def forward(self, x, sadj, fadj):
-        emb1 = self.SGCN(x, sadj)
-        emb2 = self.FGCN(x, fadj)
-        meta = torch.clamp(self.meta, 0.0, 1.0).to(x.device)
-        fusion_adjacency = meta * fadj + (1.0 - meta) * sadj
-        fusion_embedding = self.CGCN(
-            x,
-            fusion_adjacency,
-        )
+    def _get_meta(self, device):
+        if self.fixed_meta is None:
+            return torch.clamp(self.meta, 0.0, 1.0).to(device)
+        return self.meta_const.to(device)
 
-        branches = torch.stack(
-            [emb1, fusion_embedding, emb2],
-            dim=1,
-        )
-        attention = F.normalize(self.MLP_L(branches), p=2, dim=1)
-        fused = torch.cat(
-            [
-                attention[:, 0] * emb1,
-                attention[:, 1] * fusion_embedding,
-                attention[:, 2] * emb2,
-            ],
-            dim=1,
-        )
-        emb = self.proj3(fused)
+    def forward(self, x, sadj, fadj):
+        emb1 = self.SGCN(x, sadj) if self.use_s_branch else None
+        emb2 = self.FGCN(x, fadj) if self.use_f_branch else None
+
+        conadj = None
+        com = None
+        if self.use_c_branch:
+            meta = self._get_meta(x.device)
+            conadj = meta * fadj + (1.0 - meta) * sadj
+            com = self.CGCN(x, conadj)
+
+        active = [b for b in [emb1, com, emb2] if b is not None]
+        if len(active) == 0:
+            raise RuntimeError("At least one branch must be enabled.")
+
+        if len(active) == 1:
+            emb = active[0]
+        elif self.use_amf:
+            stacked = torch.stack(active, dim=1)   # [N, B, 64]
+            attn = self.MLP_L(stacked)
+            attn = F.normalize(attn, p=2, dim=1)
+            weighted = []
+            for i, branch in enumerate(active):
+                weighted.append(attn[:, i] * branch)
+            fused = torch.cat(weighted, dim=1)
+            if len(active) == 2:
+                emb = self.proj2(fused)
+            else:
+                emb = self.proj3(fused)
+        else:
+            emb = torch.stack(active, dim=0).mean(dim=0)
+            emb = self.proj1(emb)
 
         pi, disp, mean = self.ZINB(emb)
-        return (
-            emb,
-            pi,
-            disp,
-            mean,
-            emb1,
-            emb2,
-            fusion_embedding,
-        )
+        return emb, pi, disp, mean, emb1, emb2, com

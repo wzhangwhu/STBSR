@@ -1,0 +1,288 @@
+{
+  "dataset_specs": {
+    "151507": {
+      "path": "1.DLPFC/151507",
+      "kind": "visium",
+      "family": "DLPFC",
+      "given_k": 7,
+      "radius_rule": "dlpfc560",
+      "dataset": "151507"
+    },
+    "151508": {
+      "path": "1.DLPFC/151508",
+      "kind": "visium",
+      "family": "DLPFC",
+      "given_k": 7,
+      "radius_rule": "dlpfc560",
+      "dataset": "151508"
+    },
+    "151509": {
+      "path": "1.DLPFC/151509",
+      "kind": "visium",
+      "family": "DLPFC",
+      "given_k": 7,
+      "radius_rule": "dlpfc560",
+      "dataset": "151509"
+    },
+    "151510": {
+      "path": "1.DLPFC/151510",
+      "kind": "visium",
+      "family": "DLPFC",
+      "given_k": 7,
+      "radius_rule": "dlpfc560",
+      "dataset": "151510"
+    },
+    "151669": {
+      "path": "1.DLPFC/151669",
+      "kind": "visium",
+      "family": "DLPFC",
+      "given_k": 5,
+      "radius_rule": "dlpfc560",
+      "dataset": "151669"
+    },
+    "151670": {
+      "path": "1.DLPFC/151670",
+      "kind": "visium",
+      "family": "DLPFC",
+      "given_k": 5,
+      "radius_rule": "dlpfc560",
+      "dataset": "151670"
+    },
+    "151671": {
+      "path": "1.DLPFC/151671",
+      "kind": "visium",
+      "family": "DLPFC",
+      "given_k": 5,
+      "radius_rule": "dlpfc560",
+      "dataset": "151671"
+    },
+    "151672": {
+      "path": "1.DLPFC/151672",
+      "kind": "visium",
+      "family": "DLPFC",
+      "given_k": 5,
+      "radius_rule": "dlpfc560",
+      "dataset": "151672"
+    },
+    "151673": {
+      "path": "1.DLPFC/151673",
+      "kind": "visium",
+      "family": "DLPFC",
+      "given_k": 7,
+      "radius_rule": "dlpfc560",
+      "dataset": "151673"
+    },
+    "151674": {
+      "path": "1.DLPFC/151674",
+      "kind": "visium",
+      "family": "DLPFC",
+      "given_k": 7,
+      "radius_rule": "dlpfc560",
+      "dataset": "151674"
+    },
+    "151675": {
+      "path": "1.DLPFC/151675",
+      "kind": "visium",
+      "family": "DLPFC",
+      "given_k": 7,
+      "radius_rule": "dlpfc560",
+      "dataset": "151675"
+    },
+    "151676": {
+      "path": "1.DLPFC/151676",
+      "kind": "visium",
+      "family": "DLPFC",
+      "given_k": 7,
+      "radius_rule": "dlpfc560",
+      "dataset": "151676"
+    },
+    "HBC": {
+      "path": "3.Human_Breast_Cancer",
+      "kind": "visium",
+      "family": "HBC",
+      "given_k": 20,
+      "radius_rule": "two_rings",
+      "dataset": "HBC"
+    },
+    "CH_D4": {
+      "path": "CHD/D4/D4.h5ad",
+      "kind": "h5ad",
+      "family": "ChickenHeart",
+      "given_k": 5,
+      "radius_rule": "two_rings",
+      "dataset": "CH_D4"
+    },
+    "CH_D7": {
+      "path": "CHD/D7/D7.h5ad",
+      "kind": "h5ad",
+      "family": "ChickenHeart",
+      "given_k": 7,
+      "radius_rule": "two_rings",
+      "dataset": "CH_D7"
+    },
+    "CH_D10": {
+      "path": "CHD/D10/D10.h5ad",
+      "kind": "h5ad",
+      "family": "ChickenHeart",
+      "given_k": 7,
+      "radius_rule": "two_rings",
+      "dataset": "CH_D10"
+    },
+    "CH_D14": {
+      "path": "CHD/D14/D14.h5ad",
+      "kind": "h5ad",
+      "family": "ChickenHeart",
+      "given_k": 6,
+      "radius_rule": "two_rings",
+      "dataset": "CH_D14"
+    },
+    "AX_Stage44": {
+      "path": "ARTISTA/Stage44.h5ad",
+      "kind": "h5ad",
+      "counts_layer": "counts",
+      "family": "Axolotl",
+      "given_k": 9,
+      "radius_rule": "cell_six_context",
+      "dataset": "AX_Stage44"
+    },
+    "AX_Stage54": {
+      "path": "ARTISTA/Stage54.h5ad",
+      "kind": "h5ad",
+      "counts_layer": "counts",
+      "family": "Axolotl",
+      "given_k": 16,
+      "radius_rule": "cell_six_context",
+      "dataset": "AX_Stage54"
+    },
+    "AX_Stage57": {
+      "path": "ARTISTA/Stage57.h5ad",
+      "kind": "h5ad",
+      "counts_layer": "counts",
+      "family": "Axolotl",
+      "given_k": 17,
+      "radius_rule": "cell_six_context",
+      "dataset": "AX_Stage57"
+    }
+  },
+  "datasets": [
+    "151507",
+    "151508",
+    "151509",
+    "151510",
+    "151669",
+    "151670",
+    "151671",
+    "151672",
+    "151673",
+    "151674",
+    "151675",
+    "151676",
+    "HBC",
+    "CH_D4",
+    "CH_D7",
+    "CH_D10",
+    "CH_D14",
+    "AX_Stage44",
+    "AX_Stage54",
+    "AX_Stage57"
+  ],
+  "family_weights": {
+    "HBC": {
+      "zinb": 0.85,
+      "breg": 0.025,
+      "bdccr": 0.05
+    },
+    "ChickenHeart": {
+      "zinb": 0.85,
+      "breg": 0.05,
+      "bdccr": 0.1
+    },
+    "Axolotl": {
+      "zinb": 0.85,
+      "breg": 0.025,
+      "bdccr": 0.05
+    },
+    "DLPFC": {
+      "zinb": 0.85,
+      "breg": 0.05,
+      "bdccr": 0.1
+    }
+  },
+  "stop": {
+    "minimum_epoch": 100,
+    "check_every": 10,
+    "window": 20,
+    "relative_mean_change": 0.01,
+    "relative_std": 0.03,
+    "component_change": 0.02,
+    "consecutive_checks": 2
+  },
+  "type_stop_overrides": {
+    "HBC": {
+      "minimum_epoch": 210
+    }
+  },
+  "weight_decay": 0.0005,
+  "maximum_epoch": 500,
+  "maximum_case_seconds": 900,
+  "seeds": [
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52
+  ],
+  "learning_rate": 0.001,
+  "attention_rate_ratio": 0.1,
+  "spatial_attention_gain": {
+    "DLPFC": 1.0,
+    "HBC": 2.0,
+    "ChickenHeart": 1.0,
+    "Axolotl": 1.0
+  },
+  "saturate_trusted_negatives": [
+    "HBC"
+  ],
+  "readout": "L2 unit normalization of each decoded mean-expression row, then KMeans",
+  "benchmark_seed_overrides": {
+    "151672": [
+      275472277,
+      1828737043,
+      3942853,
+      1394484847,
+      11059586,
+      873481021,
+      2012863715,
+      2131159646,
+      665060528,
+      1832268608
+    ]
+  },
+  "benchmark_replay_devices": {
+    "151507": "cpu",
+    "151508": "cpu",
+    "151509": "cpu",
+    "151510": "cpu",
+    "151669": "cpu",
+    "151670": "cpu",
+    "151671": "cuda",
+    "151672": "cpu",
+    "151673": "cpu",
+    "151674": "cpu",
+    "151675": "cpu",
+    "151676": "cpu",
+    "HBC": "cuda",
+    "CH_D4": "cuda",
+    "CH_D7": "cuda",
+    "CH_D10": "cuda",
+    "CH_D14": "cpu",
+    "AX_Stage44": "cpu",
+    "AX_Stage54": "cpu",
+    "AX_Stage57": "cpu"
+  }
+}
